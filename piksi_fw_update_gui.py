@@ -4,15 +4,15 @@ import sys
 #      generated binary size
 from PyQt4 import QtGui, QtCore, QtSvg
 from PyQt4.QtGui import QSizePolicy
+from intelhex import IntelHex
+
+# TODO: Set icon to Swift Nav Logo
 
 REV = 0.1
 # TODO: see if there's a better way to size and position things
 WINDOW_WIDTH = 700
 WINDOW_HEIGHT = 400
-BUTTON_MAX_WIDTH = 200
-BOXES_MAX_WIDTH = 350
-#LOGO_HEIGHT = 300
-#LOGO_WIDTH = 200
+LEFT_MAX_WIDTH = 200
 
 def download():
   print "yes"
@@ -60,6 +60,17 @@ class SwiftNavLogo(QtSvg.QSvgWidget):
   def widthForHeight(self, height):
     return int(height*(1/self.h_to_w))
 
+class Firmware(QtGui.QLineEdit):
+
+  def __init__(self):
+    super(Firmware, self).__init__()
+    self.setReadOnly(True)
+
+  def load(self, fname):
+    self.fname = fname
+#    self.ihx = IntelHex(self.fname)
+    self.setText(self.fname)
+
 # TODO: add add actions to menu
 class PiksiUpdateGUI(QtGui.QMainWindow):
 
@@ -89,22 +100,23 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     # Buttons
     prog_btn = QtGui.QPushButton('Program', self)
     prog_btn.setToolTip('Program Piksi with the selected firmware')
-    prog_btn.setMaximumWidth(BUTTON_MAX_WIDTH)
+    prog_btn.setMaximumWidth(LEFT_MAX_WIDTH)
     prog_btn.clicked.connect(self.program)
 
     dl_btn = QtGui.QPushButton('Download', self)
     dl_btn.setToolTip('Download the latest firmware from Swift Navigation')
-    dl_btn.setMaximumWidth(BUTTON_MAX_WIDTH)
+    dl_btn.setMaximumWidth(LEFT_MAX_WIDTH)
     dl_btn.clicked.connect(download)
 
     quit_btn = QtGui.QPushButton('Quit', self)
     quit_btn.setToolTip('Exit the program')
-    quit_btn.setMaximumWidth(BUTTON_MAX_WIDTH)
+    quit_btn.setMaximumWidth(LEFT_MAX_WIDTH)
     quit_btn.clicked.connect(self.close)
 
+    # TODO: have load, load
     load_btn = QtGui.QPushButton('Load', self)
     load_btn.setToolTip('Load firmware files to program Piksi with')
-    load_btn.setMaximumWidth(BUTTON_MAX_WIDTH)
+    load_btn.setMaximumWidth(LEFT_MAX_WIDTH)
     load_btn.clicked.connect(self.close)
 
     # Progress bar.
@@ -113,6 +125,14 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
 
     # Console output.
     self.console = Console()
+
+    # Lines that have Intel Hex firmware files associated with them.
+    self.stm_fw = Firmware()
+    self.stm_fw.setMaximumWidth(LEFT_MAX_WIDTH)
+    self.stm_label = QtGui.QLabel('STM Firmware', self)
+    self.fpga_fw = Firmware()
+    self.fpga_fw.setMaximumWidth(LEFT_MAX_WIDTH)
+    self.fpga_label = QtGui.QLabel('FPGA Firmware', self)
 
     # Set vertical boxes.
     vbox_l = QtGui.QVBoxLayout()
@@ -129,6 +149,10 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     vbox_l.addWidget(dl_btn)
     vbox_l.addWidget(load_btn)
     vbox_l.addWidget(quit_btn)
+    vbox_l.addWidget(self.stm_label)
+    vbox_l.addWidget(self.stm_fw)
+    vbox_l.addWidget(self.fpga_label)
+    vbox_l.addWidget(self.fpga_fw)
     vbox_l.insertStretch(-1)
 
     vbox_r.addWidget(self.console)
@@ -141,8 +165,7 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
 
     win.setLayout(hbox)
 
-    win.setWindowTitle('Piksi Firmware Update Tool v' + str(REV))
-
+    self.setWindowTitle('Piksi Firmware Update Tool v' + str(REV))
     self.setCentralWidget(win)
     self.show()
 
@@ -164,6 +187,8 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     print "herro"
     self.pbar_val += 10
     self.pbar.setValue(self.pbar_val)
+    self.stm_fw.load("oh herro " + str(self.pbar_val))
+    self.fpga_fw.load("oh hi " + str(self.pbar_val))
 
   def showFileOpenDialog(self):
     fname = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '/home')
