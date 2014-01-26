@@ -17,12 +17,30 @@ BOXES_MAX_WIDTH = 350
 def download():
   print "yes"
 
-class EmittingStream(QtCore.QObject):
+class ConsoleStream(QtCore.QObject):
+  textWritten = QtCore.pyqtSignal(str)
 
-    textWritten = QtCore.pyqtSignal(str)
+  def write(self, text):
+    self.textWritten.emit(str(text))
 
-    def write(self, text):
-        self.textWritten.emit(str(text))
+class Console(QtGui.QTextEdit):
+
+  def __init__(self):
+    super(Console, self).__init__()
+    sys.stdout = ConsoleStream(textWritten = self.write_text)
+
+  def __del__(self):
+    self.stop()
+
+  def stop(self):
+    sys.stdout = sys.__stdout__
+
+  def write_text(self, text):
+    cursor = self.textCursor()
+    cursor.movePosition(QtGui.QTextCursor.End)
+    cursor.insertText(text)
+    self.setTextCursor(cursor)
+    self.ensureCursorVisible()
 
 # Swift Navigation Logo with a fixed aspect ratio.
 class SwiftNavLogo(QtSvg.QSvgWidget):
@@ -51,9 +69,6 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     # Window
     win = QtGui.QWidget()
 
-    # Redirect STDOUT to the console embedded in our GUI.
-    sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
-
     # File dialog for loading firmware files.
     openFile = QtGui.QAction(QtGui.QIcon('free.png'), 'Open', self)
     openFile.setShortcut('Ctrl+O')
@@ -63,7 +78,6 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     menubar = self.menuBar()
     fileMenu = menubar.addMenu('&File')
     fileMenu.addAction(openFile)
-
 
     # Start window in center of screen, make its size fixed.
     dt = QtGui.QApplication.desktop().availableGeometry()
@@ -103,12 +117,10 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
 
     # Progress bar.
     self.pbar = QtGui.QProgressBar(self)
-#    self.pbar.setMaximumWidth(BOXES_MAX_WIDTH)
     self.pbar_val = 0
 
     # Console output.
-    self.output = QtGui.QTextEdit()
-#    self.output.setMaximumWidth(BOXES_MAX_WIDTH)
+    self.console = Console()
 
     # Add widgets to boxes and set positions.
     vbox_l.addWidget(logo)
@@ -117,7 +129,7 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     vbox_l.addWidget(quit_btn)
     vbox_l.insertStretch(4)
 
-    vbox_r.addWidget(self.output)
+    vbox_r.addWidget(self.console)
     vbox_r.addWidget(self.pbar)
 
     win.setLayout(hbox)
@@ -128,7 +140,7 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     self.show()
 
   def __del__(self):
-    sys.stdout = sys.__stdout__ # Reset STDOUT to default.
+    self.console.stop()
 
   # TODO: warn if firmware update or download is in process
   def closeEvent(self, event):
@@ -140,15 +152,6 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
       event.accept()
     else:
       event.ignore()
-
-  def normalOutputWritten(self, text):
-    """Append text to the QTextEdit."""
-    # Maybe QTextEdit.append() works as well, but this is how I do it:
-    cursor = self.output.textCursor()
-    cursor.movePosition(QtGui.QTextCursor.End)
-    cursor.insertText(text)
-    self.output.setTextCursor(cursor)
-    self.output.ensureCursorVisible()
 
   def program(self):
     print "herro"
