@@ -3,16 +3,17 @@ import sys
 #TODO: seeing if only importing used objects reduces pyinstaller
 #      generated binary size
 from PyQt4 import QtGui, QtCore, QtSvg
-from PyQt4.QtGui import QSizePolicy
-from intelhex import IntelHex
+from PyQt4.QtGui import QSizePolicy, QMessageBox, QFileDialog
+from intelhex import IntelHex, HexRecordError
+from os.path import relpath
 
 # TODO: Set icon to Swift Nav Logo
 
 REV = 0.1
 # TODO: see if there's a better way to size and position things
 WINDOW_WIDTH = 700
-WINDOW_HEIGHT = 400
-LEFT_MAX_WIDTH = 200
+WINDOW_HEIGHT = 425
+LEFT_MAX_WIDTH = 250
 
 def download():
   print "yes"
@@ -60,16 +61,26 @@ class SwiftNavLogo(QtSvg.QSvgWidget):
   def widthForHeight(self, height):
     return int(height*(1/self.h_to_w))
 
+class EmptyIntelHexError(Exception):
+
+   def __init__(self):
+      super(EmptyIntelHexError, self).__init__()
+
 class Firmware(QtGui.QLineEdit):
 
   def __init__(self):
     super(Firmware, self).__init__()
+    self.ihx = None
     self.setReadOnly(True)
 
   def load(self, fname):
-    self.fname = fname
-#    self.ihx = IntelHex(self.fname)
-    self.setText(self.fname)
+    tmp = IntelHex(fname)
+    # If empty file is loaded IntelHex instantiation doesn't raise an error.
+    if tmp.addresses() == []:
+      raise EmptyIntelHexError
+    else:
+      self.ihx = tmp
+      self.setText(relpath(fname))
 
 # TODO: add add actions to menu
 class PiksiUpdateGUI(QtGui.QMainWindow):
@@ -84,7 +95,7 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     openFile = QtGui.QAction(QtGui.QIcon('free.png'), 'Open', self)
     openFile.setShortcut('Ctrl+O')
     openFile.setStatusTip('Open new File')
-    openFile.triggered.connect(self.showFileOpenDialog)
+    openFile.triggered.connect(self.loadFirmwaresDialog)
 
     # Start window in center of screen, make its size fixed.
     dt = QtGui.QApplication.desktop().availableGeometry()
@@ -113,11 +124,10 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     quit_btn.setMaximumWidth(LEFT_MAX_WIDTH)
     quit_btn.clicked.connect(self.close)
 
-    # TODO: have load, load
     load_btn = QtGui.QPushButton('Load', self)
     load_btn.setToolTip('Load firmware files to program Piksi with')
     load_btn.setMaximumWidth(LEFT_MAX_WIDTH)
-    load_btn.clicked.connect(self.close)
+    load_btn.clicked.connect(self.loadFirmwaresDialog)
 
     # Progress bar.
     self.pbar = QtGui.QProgressBar(self)
@@ -174,11 +184,11 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
 
   # TODO: warn if firmware update or download is in process
   def closeEvent(self, event):
-    reply = QtGui.QMessageBox.question(self, 'Message',
-                                 "Are you sure to quit?",
-                                 QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
-                                 QtGui.QMessageBox.No)
-    if reply == QtGui.QMessageBox.Yes:
+    reply = QMessageBox.question(self, 'Message',
+                                 "Are you sure you want to quit?",
+                                 QMessageBox.Yes | QMessageBox.No,
+                                 QMessageBox.No)
+    if reply == QMessageBox.Yes:
       event.accept()
     else:
       event.ignore()
@@ -187,15 +197,31 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     print "herro"
     self.pbar_val += 10
     self.pbar.setValue(self.pbar_val)
-    self.stm_fw.load("oh herro " + str(self.pbar_val))
-    self.fpga_fw.load("oh hi " + str(self.pbar_val))
 
-  def showFileOpenDialog(self):
-    fname = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '/home')
-    f = open(fname, 'r')
-    with f:
-      data = f.read()
-      self.textEdit.setText(data)
+  def loadFirmwaresDialog(self):
+    fname = str(QFileDialog.getOpenFileName(self, 'Select STM Firmware File'))
+    if fname:
+      try:
+        self.stm_fw.load(fname)
+      except HexRecordError : # Incorrect file type.
+        QMessageBox.warning(self, "Error : Incorrect file type",
+                            "Incorrect file type (not an Intel Hex file).")
+        return
+      except EmptyIntelHexError : # Empty file loaded.
+        QMessageBox.warning(self, "Error : Empty file", "Hex file is empty.")
+        return
+    else:
+      return
+
+    fname = str(QFileDialog.getOpenFileName(self, 'Select FPGA Firmware File'))
+    if fname:
+      try:
+        self.fpga_fw.load(fname)
+      except HexRecordError : # Incorrect file type.
+        QMessageBox.warning(self, "Error : Incorrect file type",
+                            "Incorrect file type (not an Intel Hex file).")
+      except EmptyIntelHexError : # Empty file loaded.
+        QMessageBox.warning(self, "Error : Empty file", "Hex file is empty.")
 
 #TODO : add visible flag to see if firmware is most current release
 def main():
