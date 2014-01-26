@@ -66,7 +66,7 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
   def __init__(self):
     super(PiksiUpdateGUI, self).__init__()
 
-    # Window
+    # Main window of GUI.
     win = QtGui.QWidget()
 
     # File dialog for loading firmware files.
@@ -75,32 +75,20 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     openFile.setStatusTip('Open new File')
     openFile.triggered.connect(self.showFileOpenDialog)
 
-    menubar = self.menuBar()
-    fileMenu = menubar.addMenu('&File')
-    fileMenu.addAction(openFile)
-
     # Start window in center of screen, make its size fixed.
     dt = QtGui.QApplication.desktop().availableGeometry()
     dt_center = dt.center()
-#    self.setGeometry(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
-    self.setGeometry(dt_center.x()-self.width()*0.5, dt_center.y()-self.height()*0.5, WINDOW_WIDTH, WINDOW_HEIGHT)
-#    self.setFixedSize(WINDOW_WIDTH, WINDOW_HEIGHT)
+    self.setGeometry(dt_center.x()-self.width()*0.5,
+                     dt_center.y()-self.height()*0.5,
+                     WINDOW_WIDTH, WINDOW_HEIGHT)
     self.move(dt_center.x()-self.width()*0.5, dt_center.y()-self.height()*0.5)
-
-    vbox_l = QtGui.QVBoxLayout()
-    vbox_r = QtGui.QVBoxLayout()
-    hbox = QtGui.QHBoxLayout()
-    hbox.insertStretch(1)
-    hbox.addLayout(vbox_l, stretch = 1)
-    hbox.insertStretch(3)
-    hbox.addLayout(vbox_r, stretch = 1)
 
     # Swift Navigation Inc logo.
     logo = SwiftNavLogo()
 
     # Buttons
     prog_btn = QtGui.QPushButton('Program', self)
-    prog_btn.setToolTip('Program Piksi with the downloaded firmware')
+    prog_btn.setToolTip('Program Piksi with the selected firmware')
     prog_btn.setMaximumWidth(BUTTON_MAX_WIDTH)
     prog_btn.clicked.connect(self.program)
 
@@ -109,11 +97,15 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     dl_btn.setMaximumWidth(BUTTON_MAX_WIDTH)
     dl_btn.clicked.connect(download)
 
-    # TODO: make quit button the same as window quit button, or remove?
     quit_btn = QtGui.QPushButton('Quit', self)
     quit_btn.setToolTip('Exit the program')
     quit_btn.setMaximumWidth(BUTTON_MAX_WIDTH)
-    quit_btn.clicked.connect(QtCore.QCoreApplication.instance().quit)
+    quit_btn.clicked.connect(self.close)
+
+    load_btn = QtGui.QPushButton('Load', self)
+    load_btn.setToolTip('Load firmware files to program Piksi with')
+    load_btn.setMaximumWidth(BUTTON_MAX_WIDTH)
+    load_btn.clicked.connect(self.close)
 
     # Progress bar.
     self.pbar = QtGui.QProgressBar(self)
@@ -122,15 +114,30 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     # Console output.
     self.console = Console()
 
+    # Set vertical boxes.
+    vbox_l = QtGui.QVBoxLayout()
+    vbox_r = QtGui.QVBoxLayout()
+    hbox = QtGui.QHBoxLayout()
+    hbox.insertStretch(1)
+    hbox.addLayout(vbox_l, stretch = 1)
+    hbox.insertStretch(3)
+    hbox.addLayout(vbox_r, stretch = 1)
+
     # Add widgets to boxes and set positions.
     vbox_l.addWidget(logo)
     vbox_l.addWidget(prog_btn)
     vbox_l.addWidget(dl_btn)
+    vbox_l.addWidget(load_btn)
     vbox_l.addWidget(quit_btn)
-    vbox_l.insertStretch(4)
+    vbox_l.insertStretch(-1)
 
     vbox_r.addWidget(self.console)
     vbox_r.addWidget(self.pbar)
+
+    # Menu for alternate actions.
+    menubar = self.menuBar()
+    fileMenu = menubar.addMenu('&File')
+    fileMenu.addAction(openFile)
 
     win.setLayout(hbox)
 
@@ -155,8 +162,8 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
 
   def program(self):
     print "herro"
-    self.pbar.setValue(self.pbar_val)
     self.pbar_val += 10
+    self.pbar.setValue(self.pbar_val)
 
   def showFileOpenDialog(self):
     fname = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '/home')
