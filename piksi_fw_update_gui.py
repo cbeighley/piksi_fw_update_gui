@@ -27,7 +27,7 @@ class EmittingStream(QtCore.QObject):
 # Swift Navigation Logo with a fixed aspect ratio.
 class SwiftNavLogo(QtSvg.QSvgWidget):
   filename = 'sn_logo.svg'
-  h_to_w = float(232)/350
+  h_to_w = float(232)/350 # Aspect ratio of original image.
 
   def __init__(self, parent=None):
     QtSvg.QSvgWidget.__init__(self, self.filename, parent)
@@ -42,12 +42,28 @@ class SwiftNavLogo(QtSvg.QSvgWidget):
   def widthForHeight(self, height):
     return int(height*(1/self.h_to_w))
 
-class PiksiUpdateGUI(QtGui.QWidget):
+# TODO: add add actions to menu
+class PiksiUpdateGUI(QtGui.QMainWindow):
 
   def __init__(self):
     super(PiksiUpdateGUI, self).__init__()
 
+    # Window
+    win = QtGui.QWidget()
+
+    # Redirect STDOUT to the console embedded in our GUI.
     sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
+
+    # File dialog for loading firmware files.
+    openFile = QtGui.QAction(QtGui.QIcon('free.png'), 'Open', self)
+    openFile.setShortcut('Ctrl+O')
+    openFile.setStatusTip('Open new File')
+    openFile.triggered.connect(self.showFileOpenDialog)
+
+    menubar = self.menuBar()
+    fileMenu = menubar.addMenu('&File')
+    fileMenu.addAction(openFile)
+
 
     # Start window in center of screen, make its size fixed.
     dt = QtGui.QApplication.desktop().availableGeometry()
@@ -104,11 +120,15 @@ class PiksiUpdateGUI(QtGui.QWidget):
     vbox_r.addWidget(self.output)
     vbox_r.addWidget(self.pbar)
 
-    self.setLayout(hbox)
+    win.setLayout(hbox)
 
-    self.setWindowTitle('Piksi Firmware Update Tool v' + str(REV))
+    win.setWindowTitle('Piksi Firmware Update Tool v' + str(REV))
+
+    self.setCentralWidget(win)
     self.show()
 
+  def __del__(self):
+    sys.stdout = sys.__stdout__ # Reset STDOUT to default.
 
   # TODO: warn if firmware update or download is in process
   def closeEvent(self, event):
@@ -130,21 +150,23 @@ class PiksiUpdateGUI(QtGui.QWidget):
     self.output.setTextCursor(cursor)
     self.output.ensureCursorVisible()
 
-  # TODO: Add console
-  # TODO: Add progress bar
-
   def program(self):
     print "herro"
     self.pbar.setValue(self.pbar_val)
     self.pbar_val += 10
 
+  def showFileOpenDialog(self):
+    fname = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '/home')
+    f = open(fname, 'r')
+    with f:
+      data = f.read()
+      self.textEdit.setText(data)
+
 #TODO : add visible flag to see if firmware is most current release
 def main():
-
   app = QtGui.QApplication(sys.argv)
   gui = PiksiUpdateGUI()
   sys.exit(app.exec_())
-
 
 if __name__ == '__main__':
   main()
