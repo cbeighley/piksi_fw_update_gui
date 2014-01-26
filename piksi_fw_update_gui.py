@@ -91,12 +91,6 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     # Main window of GUI.
     win = QtGui.QWidget()
 
-    # File dialog for loading firmware files.
-    openFile = QtGui.QAction(QtGui.QIcon('free.png'), 'Open', self)
-    openFile.setShortcut('Ctrl+O')
-    openFile.setStatusTip('Open new File')
-    openFile.triggered.connect(self.loadFirmwaresDialog)
-
     # Start window in center of screen, make its size fixed.
     dt = QtGui.QApplication.desktop().availableGeometry()
     dt_center = dt.center()
@@ -168,11 +162,6 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     vbox_r.addWidget(self.console)
     vbox_r.addWidget(self.pbar)
 
-    # Menu for alternate actions.
-    menubar = self.menuBar()
-    fileMenu = menubar.addMenu('&File')
-    fileMenu.addAction(openFile)
-
     win.setLayout(hbox)
 
     self.setWindowTitle('Piksi Firmware Update Tool v' + str(REV))
@@ -199,6 +188,7 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     self.pbar.setValue(self.pbar_val)
 
   def loadFirmwaresDialog(self):
+    # Load STM Firmware.
     fname = str(QFileDialog.getOpenFileName(self, 'Select STM Firmware File'))
     if fname:
       try:
@@ -213,6 +203,7 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     else:
       return
 
+    # Load FPGA Firmware.
     fname = str(QFileDialog.getOpenFileName(self, 'Select FPGA Firmware File'))
     if fname:
       try:
