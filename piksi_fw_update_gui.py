@@ -12,7 +12,7 @@ from os.path import relpath
 REV = 0.1
 # TODO: see if there's a better way to size and position things
 WINDOW_WIDTH = 700
-WINDOW_HEIGHT = 425
+WINDOW_HEIGHT = 430
 LEFT_MAX_WIDTH = 250
 
 def download():
@@ -82,13 +82,12 @@ class Firmware(QtGui.QLineEdit):
       self.ihx = tmp
       self.setText(relpath(fname))
 
-# TODO: add add actions to menu
 class PiksiUpdateGUI(QtGui.QMainWindow):
 
   def __init__(self):
     super(PiksiUpdateGUI, self).__init__()
 
-    # Main window of GUI.
+    # Main widget of GUI.
     win = QtGui.QWidget()
 
     # Start window in center of screen, make its size fixed.
@@ -165,6 +164,7 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     win.setLayout(hbox)
 
     self.setWindowTitle('Piksi Firmware Update Tool v' + str(REV))
+    self.setWindowIcon(QtGui.QIcon('sn_icon.svg'))
     self.setCentralWidget(win)
     self.show()
 
