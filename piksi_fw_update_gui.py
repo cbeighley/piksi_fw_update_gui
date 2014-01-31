@@ -7,8 +7,6 @@ from PyQt4.QtGui import QSizePolicy, QMessageBox, QFileDialog
 from intelhex import IntelHex, HexRecordError
 from os.path import relpath
 
-# TODO: Set icon to Swift Nav Logo
-
 REV = 0.1
 # TODO: see if there's a better way to size and position things
 WINDOW_WIDTH = 700
@@ -24,17 +22,23 @@ class ConsoleStream(QtCore.QObject):
   def write(self, text):
     self.textWritten.emit(str(text))
 
+  def flush(self):
+    sys.__stdout__.flush()
+    sys.__stderr__.flush()
+
 class Console(QtGui.QTextEdit):
 
   def __init__(self):
     super(Console, self).__init__()
     sys.stdout = ConsoleStream(textWritten = self.write_text)
+    sys.stderr = ConsoleStream(textWritten = self.write_text)
 
   def __del__(self):
     self.stop()
 
   def stop(self):
     sys.stdout = sys.__stdout__
+    sys.stderr = sys.__stderr__
 
   def write_text(self, text):
     cursor = self.textCursor()
