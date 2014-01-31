@@ -12,22 +12,73 @@ from os.path import relpath
 
 REV = 0.1
 # TODO: see if there's a better way to size and position things
-WINDOW_WIDTH = 700
+WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 430
 LEFT_MAX_WIDTH = 250
 
+global app
+
 def download():
-  print "yes"
+  if download.blah == 0:
+    print "whatup",
+  if download.blah == 1:
+    print "hello",
+  if download.blah == 2:
+    print "\r",
+  download.blah = (download.blah + 1) % 3
+download.blah = 0
+
+class OutputWrapper(QtCore.QObject):
+  outputWritten = QtCore.pyqtSignal(object, object)
+
+  def __init__(self, parent, stdout=True):
+    QtCore.QObject.__init__(self, parent)
+    if stdout:
+      self._stream = sys.stdout
+      sys.stdout = self
+    else:
+      self._stream = sys.stderr
+      sys.stderr = self
+    self._stdout = stdout
+
+  def write(self, text):
+    global app
+    self._stream.write(text)
+    self.outputWritten.emit(text, self._stdout)
+    app.processEvents()
+#    self.outputWritten.emit(text)
+
+  def flush(self):
+    global app
+    sys.__stdout__.flush()
+    sys.__stderr__.flush()
+    app.processEvents()
+
+#  def __getattr__(self, name):
+#    return getattr(self._stream, name)
+#
+#  def __del__(self):
+#    try:
+#      if self._stdout:
+#        sys.stdout = self._stream
+#      else:
+#        sys.stderr = self._stream
+#    except AttributeError:
+#      pass
 
 class _ConsoleStream(QtCore.QObject):
   textWritten = QtCore.pyqtSignal(str)
 
   def write(self, text):
+    global app
     self.textWritten.emit(str(text))
+    app.processEvents()
 
   def flush(self):
+    global app
     sys.__stdout__.flush()
     sys.__stderr__.flush()
+    app.processEvents()
 
 class Console(QtGui.QTextEdit):
 
@@ -35,6 +86,7 @@ class Console(QtGui.QTextEdit):
     super(Console, self).__init__()
     sys.stdout = _ConsoleStream(textWritten = self._write_text)
     sys.stderr = _ConsoleStream(textWritten = self._write_text)
+    self.setReadOnly(True)
 
   def __del__(self):
     self.stop()
@@ -47,8 +99,6 @@ class Console(QtGui.QTextEdit):
     cursor = self.textCursor()
     cursor.movePosition(QtGui.QTextCursor.End)
     cursor.insertText(text)
-    self.setTextCursor(cursor)
-    self.ensureCursorVisible()
 
 # TODO: Make aspect ratio of logo fixed.
 # Swift Navigation Logo with a fixed aspect ratio.
@@ -135,7 +185,12 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     self.pbar_val = 0
 
     # Console output.
-    self.console = Console()
+#    self.console = Console()
+    self.console = QtGui.QTextEdit(self)
+    stdout = OutputWrapper(self, True)
+    stdout.outputWritten.connect(self.handleOutput)
+#    stderr = OutputWrapper(self, False)
+#    stderr.outputWritten.connect(self.handleOutput)
 
     # Lines that have Intel Hex firmware files associated with them.
     self.stm_fw = Firmware()
@@ -178,6 +233,22 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
 
   def __del__(self):
     self.console.stop()
+
+  def handleOutput(self, text, stdout):
+#    self.console.moveCursor(QtGui.QTextCursor.StartOfLine)
+    for c in text:
+      if c == '\r':
+        self.deleteLine()
+      else:
+        self.console.insertPlainText(c)
+    self.console.moveCursor(QtGui.QTextCursor.End)
+
+  def deleteLine(self):
+    tc = self.console.textCursor()
+    pos = tc.columnNumber();
+    tc.select(QtGui.QTextCursor.LineUnderCursor)
+    text = tc.selectedText()
+    tc.removeSelectedText()
 
   # TODO: warn if firmware update or download is in process
   def closeEvent(self, event):
@@ -224,6 +295,7 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
 
 #TODO : add visible flag to see if firmware is most current release
 def main():
+  global app
   app = QtGui.QApplication(sys.argv)
   gui = PiksiUpdateGUI()
   sys.exit(app.exec_())
