@@ -7,6 +7,9 @@ from PyQt4.QtGui import QSizePolicy, QMessageBox, QFileDialog
 from intelhex import IntelHex, HexRecordError
 from os.path import relpath
 
+#TODO: add flag that shows whether Piksi is connected?
+#TODO: add flag that shows whether firmware is current?
+
 REV = 0.1
 # TODO: see if there's a better way to size and position things
 WINDOW_WIDTH = 700
@@ -16,7 +19,7 @@ LEFT_MAX_WIDTH = 250
 def download():
   print "yes"
 
-class ConsoleStream(QtCore.QObject):
+class _ConsoleStream(QtCore.QObject):
   textWritten = QtCore.pyqtSignal(str)
 
   def write(self, text):
@@ -30,8 +33,8 @@ class Console(QtGui.QTextEdit):
 
   def __init__(self):
     super(Console, self).__init__()
-    sys.stdout = ConsoleStream(textWritten = self.write_text)
-    sys.stderr = ConsoleStream(textWritten = self.write_text)
+    sys.stdout = _ConsoleStream(textWritten = self._write_text)
+    sys.stderr = _ConsoleStream(textWritten = self._write_text)
 
   def __del__(self):
     self.stop()
@@ -40,13 +43,14 @@ class Console(QtGui.QTextEdit):
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
 
-  def write_text(self, text):
+  def _write_text(self, text):
     cursor = self.textCursor()
     cursor.movePosition(QtGui.QTextCursor.End)
     cursor.insertText(text)
     self.setTextCursor(cursor)
     self.ensureCursorVisible()
 
+# TODO: Make aspect ratio of logo fixed.
 # Swift Navigation Logo with a fixed aspect ratio.
 class SwiftNavLogo(QtSvg.QSvgWidget):
   filename = 'sn_logo.svg'
