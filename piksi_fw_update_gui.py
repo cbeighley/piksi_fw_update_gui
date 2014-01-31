@@ -84,8 +84,10 @@ class Console(QtGui.QTextEdit):
 
   def __init__(self):
     super(Console, self).__init__()
-    sys.stdout = _ConsoleStream(textWritten = self._write_text)
-    sys.stderr = _ConsoleStream(textWritten = self._write_text)
+    stdout = OutputWrapper(self, True)
+    stdout.outputWritten.connect(self.handle_output)
+    stderr = OutputWrapper(self, False)
+    stderr.outputWritten.connect(self.handle_output)
     self.setReadOnly(True)
 
   def __del__(self):
@@ -95,10 +97,20 @@ class Console(QtGui.QTextEdit):
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
 
-  def _write_text(self, text):
-    cursor = self.textCursor()
-    cursor.movePosition(QtGui.QTextCursor.End)
-    cursor.insertText(text)
+  def handle_output(self, text, stdout):
+    for c in text:
+      if c == '\r':
+        self.delete_line()
+      else:
+        self.insertPlainText(c)
+    self.moveCursor(QtGui.QTextCursor.End)
+
+  def delete_line(self):
+    tc = self.textCursor()
+    pos = tc.columnNumber();
+    tc.select(QtGui.QTextCursor.LineUnderCursor)
+    text = tc.selectedText()
+    tc.removeSelectedText()
 
 # TODO: Make aspect ratio of logo fixed.
 # Swift Navigation Logo with a fixed aspect ratio.
@@ -185,12 +197,13 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
     self.pbar_val = 0
 
     # Console output.
-#    self.console = Console()
-    self.console = QtGui.QTextEdit(self)
-    stdout = OutputWrapper(self, True)
-    stdout.outputWritten.connect(self.handleOutput)
+    self.console = Console()
+#    self.console = QtGui.QTextEdit(self)
+#    stdout = OutputWrapper(self, True)
+#    stdout.outputWritten.connect(self.handle_output)
+
 #    stderr = OutputWrapper(self, False)
-#    stderr.outputWritten.connect(self.handleOutput)
+#    stderr.outputWritten.connect(self.handle_output)
 
     # Lines that have Intel Hex firmware files associated with them.
     self.stm_fw = Firmware()
@@ -233,22 +246,6 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
 
   def __del__(self):
     self.console.stop()
-
-  def handleOutput(self, text, stdout):
-#    self.console.moveCursor(QtGui.QTextCursor.StartOfLine)
-    for c in text:
-      if c == '\r':
-        self.deleteLine()
-      else:
-        self.console.insertPlainText(c)
-    self.console.moveCursor(QtGui.QTextCursor.End)
-
-  def deleteLine(self):
-    tc = self.console.textCursor()
-    pos = tc.columnNumber();
-    tc.select(QtGui.QTextCursor.LineUnderCursor)
-    text = tc.selectedText()
-    tc.removeSelectedText()
 
   # TODO: warn if firmware update or download is in process
   def closeEvent(self, event):
