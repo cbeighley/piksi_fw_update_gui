@@ -28,50 +28,12 @@ def download():
   download.blah = (download.blah + 1) % 3
 download.blah = 0
 
-class OutputWrapper(QtCore.QObject):
-  outputWritten = QtCore.pyqtSignal(object, object)
-
-  def __init__(self, parent, stdout=True):
-    QtCore.QObject.__init__(self, parent)
-    if stdout:
-      self._stream = sys.stdout
-      sys.stdout = self
-    else:
-      self._stream = sys.stderr
-      sys.stderr = self
-    self._stdout = stdout
+class ConsoleStream(QtCore.QObject):
+  write_signal = QtCore.pyqtSignal(str)
 
   def write(self, text):
     global app
-    self._stream.write(text)
-    self.outputWritten.emit(text, self._stdout)
-    app.processEvents()
-#    self.outputWritten.emit(text)
-
-  def flush(self):
-    global app
-    sys.__stdout__.flush()
-    sys.__stderr__.flush()
-    app.processEvents()
-
-#  def __getattr__(self, name):
-#    return getattr(self._stream, name)
-#
-#  def __del__(self):
-#    try:
-#      if self._stdout:
-#        sys.stdout = self._stream
-#      else:
-#        sys.stderr = self._stream
-#    except AttributeError:
-#      pass
-
-class _ConsoleStream(QtCore.QObject):
-  textWritten = QtCore.pyqtSignal(str)
-
-  def write(self, text):
-    global app
-    self.textWritten.emit(str(text))
+    self.write_signal.emit(text)
     app.processEvents()
 
   def flush(self):
@@ -84,10 +46,10 @@ class Console(QtGui.QTextEdit):
 
   def __init__(self):
     super(Console, self).__init__()
-    stdout = OutputWrapper(self, True)
-    stdout.outputWritten.connect(self.handle_output)
-    stderr = OutputWrapper(self, False)
-    stderr.outputWritten.connect(self.handle_output)
+    sys.stdout = ConsoleStream()
+    sys.stdout.write_signal.connect(self.handle_output)
+    sys.stderr = ConsoleStream()
+    sys.stderr.write_signal.connect(self.handle_output)
     self.setReadOnly(True)
 
   def __del__(self):
@@ -97,7 +59,8 @@ class Console(QtGui.QTextEdit):
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
 
-  def handle_output(self, text, stdout):
+  def handle_output(self, text):
+    # Hacky way to have carriage return type functionality in QTextEdit.
     for c in text:
       if c == '\r':
         self.delete_line()
@@ -107,7 +70,6 @@ class Console(QtGui.QTextEdit):
 
   def delete_line(self):
     tc = self.textCursor()
-    pos = tc.columnNumber();
     tc.select(QtGui.QTextCursor.LineUnderCursor)
     text = tc.selectedText()
     tc.removeSelectedText()
@@ -198,12 +160,6 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
 
     # Console output.
     self.console = Console()
-#    self.console = QtGui.QTextEdit(self)
-#    stdout = OutputWrapper(self, True)
-#    stdout.outputWritten.connect(self.handle_output)
-
-#    stderr = OutputWrapper(self, False)
-#    stderr.outputWritten.connect(self.handle_output)
 
     # Lines that have Intel Hex firmware files associated with them.
     self.stm_fw = Firmware()
@@ -260,6 +216,7 @@ class PiksiUpdateGUI(QtGui.QMainWindow):
 
   def program(self):
     print "herro"
+    raise Exception
     self.pbar_val += 10
     self.pbar.setValue(self.pbar_val)
 
